@@ -6,7 +6,7 @@ output:
     theme: united
 ---
 
-# Severe Weather Effects on Public Health/Economy in Communities and Municipalities
+# Severe Weather Effects on Health/Economy in Communities and Municipalities
 
 ## Synopsis
 
@@ -32,15 +32,16 @@ depend <- function (s) {
 ### Obtaining and loading source data
 
 ```{r cache=T}
-temp <- tempfile()
-data_url <- 'https://d396qusza40orc.cloudfront.net/repdata%2Fdata%2FStormData.csv.bz2'
-download.file(data_url,temp)
-dat <- read.table(unz(temp, "stormdata.csv"),
+t <- tempfile()
+u <- 'https://d396qusza40orc.cloudfront.net/repdata%2Fdata%2FStormData.csv.bz2'
+download.file(u,t)
+dat <- read.table(unz(t, "stormdata.csv"),
                   na.strings = "NA", header=T, quote="\"", sep=",")
-unlink(temp)
+unlink(t)
 ```
 
-Describing in words and code how the data were loaded into R and processed for analysis.
+Describing in words and code how the data were loaded into R and processed for
+analysis.
 
 - Start with raw CSV
 - Cannot do any processing outside of document
