@@ -1,11 +1,32 @@
 ---
-title: "Reproducible Research: Peer Assessment 2"
+title: "Analysis of Severe Weather Events on Public Health and Economy in Communities and Municipalities"
 output:
   html_document:
     keep_md: true
     theme: united
 ---
 
+# Severe Weather Effects on Public Health/Economy in Communities and Municipalities
+
+## Synopsis
+
+This is a synopsis in less than 10 complete sentences describing and
+summarizing my analysis.
+
 ## Data Processing
 
+Describing in words and code how the data were loaded into R and processed for analysis.
+
+- Start with raw CSV
+- Cannot do any processing outside of document
+- Justification and description for any transformations
+
 ## Results
+
+- Must contain at least 1 figure
+- Document can have no more than 3 figures
+- Figures must have descriptive captions
+
+### Events most harmful to population health
+
+### Events with greatest economic consequences
