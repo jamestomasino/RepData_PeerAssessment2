@@ -35,7 +35,7 @@ depend <- function (s) {
 temp <- tempfile()
 data_url <- 'https://d396qusza40orc.cloudfront.net/repdata%2Fdata%2FStormData.csv.bz2'
 download.file(data_url,temp)
-dat <- read.table(unz(temp, "stormdata.dat"),
+dat <- read.table(unz(temp, "stormdata.csv"),
                   na.strings = "NA", header=T, quote="\"", sep=",")
 unlink(temp)
 ```
