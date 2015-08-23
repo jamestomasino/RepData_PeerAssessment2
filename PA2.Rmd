@@ -20,7 +20,7 @@ summarizing my analysis.
 The libraries that are used throughout this document are installed if
 necessary and then loaded by use of the following dependency function.
 
-```{r results="hide", warning=F, message=F}
+```{r libs, results="hide", warning=FALSE, message=FALSE, cache=TRUE}
 depend <- function (s) {
 	if (s %in% rownames(installed.packages()) == FALSE) {
 		install.packages(s, repos="http://cran.rstudio.com/", dependencies=TRUE)
@@ -31,21 +31,69 @@ depend <- function (s) {
 
 ### Obtaining and loading source data
 
-```{r cache=T}
-t <- tempfile()
-u <- 'https://d396qusza40orc.cloudfront.net/repdata%2Fdata%2FStormData.csv.bz2'
-download.file(u,t)
-dat <- read.table(unz(t, "stormdata.csv"),
-                  na.strings = "NA", header=T, quote="\"", sep=",")
-unlink(t)
-```
-
-Describing in words and code how the data were loaded into R and processed for
-analysis.
+_Describing in words and code how the data were loaded into R and processed for
+analysis._
 
 - Start with raw CSV
 - Cannot do any processing outside of document
 - Justification and description for any transformations
+
+- [Storm Data][data] used in this analysis
+
+To load this data, we request the raw CSV file from the remote location and
+cache it locally. The data is then inspected at a high level by viewing its
+head, summary, and column names. This information was compared against the
+documentation found in the following two sources.
+
+- National Weather Service [Storm Data Documentation][docs]
+- National Climatic Data Center Storm Events [FAQ][faq]
+
+A high-level view of the data is included in the output below.
+
+```{r read_data, cache=TRUE}
+t <- "./stormdata.csv.bz2"
+if (!file.exists(t)) {
+    u <- 'https://d396qusza40orc.cloudfront.net/repdata%2Fdata%2FStormData.csv.bz2'
+    download.file(u,destfile=t, method="curl")
+}
+dat <- read.table(bzfile(t), na.strings = "NA", header=T, quote="\"", sep=",")
+```
+
+```{r summary, cache=TRUE}
+colnames(dat);
+summary(dat);
+head(dat);
+```
+
+```{r trans_depend, results="hide", warning=FALSE, message=FALSE}
+depend('dplyr')
+depend('lubridate')
+```
+
+Grouping all the data by event type then allows for easy summarization of the
+data by fatalities and injuries. I have sorted the data to show the most
+impactful event types first. This data frame will be used to plot a figure
+analyzing the events with the greatest effect on population health, below.
+
+```{r trans_pop_health}
+pop_health <- dat %>%
+    group_by(EVTYPE) %>%
+    summarize(TOTAL_FATALITIES=sum(FATALITIES),
+              TOTAL_INJURIES=sum(INJURIES)) %>%
+    arrange(desc(TOTAL_FATALITIES), desc(TOTAL_INJURIES))
+
+head(pop_health)
+```
+
+```{r trans_pop_health}
+pop_health <- dat %>%
+    group_by(EVTYPE) %>%
+    summarize(TOTAL_FATALITIES=sum(FATALITIES),
+              TOTAL_INJURIES=sum(INJURIES)) %>%
+    arrange(desc(TOTAL_FATALITIES), desc(TOTAL_INJURIES))
+
+head(pop_health)
+```
 
 ## Results
 
@@ -55,4 +103,19 @@ analysis.
 
 ### Events most harmful to population health
 
+_Across the United States, which types of events (as indicated in the EVTYPE
+variable) are most harmful with respect to population health?_
+
+
 ### Events with greatest economic consequences
+
+_Across the United States, which types of events have the greatest economic consequences?_
+
+Alphabetical characters used to signify magnitude include “K” for thousands,
+“M” for millions, and “B” for billions.
+
+- - - - -
+
+[data]: https://d396qusza40orc.cloudfront.net/repdata%2Fdata%2FStormData.csv.bz2 "Source Data"
+[docs]: https://d396qusza40orc.cloudfront.net/repdata%2Fpeer2_doc%2Fpd01016005curr.pdf "Documentation"
+[faq]: https://d396qusza40orc.cloudfront.net/repdata%2Fpeer2_doc%2FNCDC%20Storm%20Events-FAQ%20Page.pdf "FAQ"
