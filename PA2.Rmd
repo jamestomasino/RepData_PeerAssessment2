@@ -10,8 +10,22 @@ output:
 
 ## Synopsis
 
-This is a synopsis in less than 10 complete sentences describing and
-summarizing my analysis.
+The following is an analysis of the NOAA Storm Events data. The data begins in
+the year 1950 and continues to 2011, with 902297 records. The data is composed
+by 37 columns. Data will be cleansed, re-orderd and analyised in order to
+answer the questions:
+
+- Across the United States, which types of events are most harmful with respect
+to population health?
+- Across the United States, which types of events have the greatest economic
+consequences?ummarizing my analysis.
+
+In the end, we will show that Tornados cause an overwhelming amount of impact
+on population health compared to other storm event types, causing 5633
+fatalities and 91346 injuries.
+
+Likewise, floods are the most impactful to economic health, causing around 150
+billion USD in damage.
 
 ## Data Processing
 
@@ -31,18 +45,11 @@ depend <- function (s) {
 
 ### Obtaining and loading source data
 
-_Describing in words and code how the data were loaded into R and processed for
-analysis._
-
-- Start with raw CSV
-- Cannot do any processing outside of document
-- Justification and description for any transformations
-
 - [Storm Data][data] used in this analysis
 
 To load this data, we request the raw CSV file from the remote location and
 cache it locally. The data is then inspected at a high level by viewing its
-head, summary, and column names. This information was compared against the
+head, and column names. This information was compared against the
 documentation found in the following two sources.
 
 - National Weather Service [Storm Data Documentation][docs]
@@ -51,9 +58,9 @@ documentation found in the following two sources.
 A high-level view of the data is included in the output below.
 
 ```{r read_data, cache=TRUE}
-t <- "./stormdata.csv.bz2"
+t <- "./storm.csv.bz2"
 if (!file.exists(t)) {
-    u <- 'https://d396qusza40orc.cloudfront.net/repdata%2Fdata%2FStormData.csv.bz2'
+    u <- 'https://d396qusza40orc.cloudfront.net/repdata%2Fdata%2FStormcsv.bz2'
     download.file(u,destfile=t, method="curl")
 }
 dat <- read.table(bzfile(t), na.strings = "NA", header=T, quote="\"", sep=",")
@@ -61,19 +68,28 @@ dat <- read.table(bzfile(t), na.strings = "NA", header=T, quote="\"", sep=",")
 
 ```{r summary, cache=TRUE}
 colnames(dat);
-summary(dat);
 head(dat);
 ```
+
+#### Data transformations
+
+For the following transformations, I'm loading and using the [dplyr][dplyr] and
+[lubridate][lubridate] libraries.
 
 ```{r trans_depend, results="hide", warning=FALSE, message=FALSE}
 depend('dplyr')
 depend('lubridate')
 ```
 
-Grouping all the data by event type then allows for easy summarization of the
-data by fatalities and injuries. I have sorted the data to show the most
-impactful event types first. This data frame will be used to plot a figure
-analyzing the events with the greatest effect on population health, below.
+Grouping all the data by event type then allows for easy summarization by
+fatalities and injuries. I have sorted the data to show the most impactful
+event types first. This data frame will be used to plot a figure analyzing the
+events with the greatest effect on population health, below.
+
+_Note: There are many variations of factors in the EVTYPE column. Some of these
+variations appear to be referring to the same type of storm event, however,
+they are not documented as such in the supporting documentation and have been
+left as-is intentionally as a result._
 
 ```{r trans_pop_health}
 pop_health <- dat %>%
@@ -85,37 +101,126 @@ pop_health <- dat %>%
 head(pop_health)
 ```
 
-```{r trans_pop_health}
-pop_health <- dat %>%
-    group_by(EVTYPE) %>%
-    summarize(TOTAL_FATALITIES=sum(FATALITIES),
-              TOTAL_INJURIES=sum(INJURIES)) %>%
-    arrange(desc(TOTAL_FATALITIES), desc(TOTAL_INJURIES))
+Calculating economic impact is a degree more difficult. There are several
+fields related to this measurement: PROPDMG, PROPDMGEXP, CROPDMG, and
+CROPDMGEXP. The PROPDMG and CROPDMG columns represent property and crop damages
+in dollar values, respectively. The EXP columns give the order of magnitude of
+those damages, ranging from thousands to billions. Unfortunately, these
+exponent columns are very un-tidy, as demonstrated by listing their factor
+levels:
 
-head(pop_health)
+
+```{r exp_factor}
+levels(factor(dat$PROPDMGEXP))
+```
+
+To correct this, we need to carefully adjust all of these values to a single
+numeric multiplier. Empty strings will get a 0 value. Symbols get a 1 value. H
+(hundreds), K (thousands), M (millions), and B (billions) will get their
+respective 2,3,6, or 9. Finally, to make sure our multiplication works, we'll
+set any empty damage numbers to 0.
+
+```{r tidy_trans_damage}
+# replace missing data with 0's
+dat$PROPDMGEXP <- as.character(dat$PROPDMGEXP)
+dat$CROPDMGEXP <- as.character(dat$CROPDMGEXP)
+
+dat$PROPDMGEXP[(dat$PROPDMGEXP == "")] <- 0
+dat$PROPDMGEXP[(dat$PROPDMGEXP == "+") | (dat$PROPDMGEXP == "-") | (dat$PROPDMGEXP == "?")] <- 1
+dat$PROPDMGEXP[(dat$PROPDMGEXP == "h") | (dat$PROPDMGEXP == "H")] <- 2
+dat$PROPDMGEXP[(dat$PROPDMGEXP == "k") | (dat$PROPDMGEXP == "K")] <- 3
+dat$PROPDMGEXP[(dat$PROPDMGEXP == "m") | (dat$PROPDMGEXP == "M")] <- 6
+dat$PROPDMGEXP[(dat$PROPDMGEXP == "B")] <- 9
+
+dat$CROPDMGEXP[(dat$CROPDMGEXP == "")] <- 0
+dat$CROPDMGEXP[(dat$CROPDMGEXP == "+") | (dat$CROPDMGEXP == "-") | (dat$CROPDMGEXP == "?")] <- 1
+dat$CROPDMGEXP[(dat$CROPDMGEXP == "h") | (dat$CROPDMGEXP == "H")] <- 2
+dat$CROPDMGEXP[(dat$CROPDMGEXP == "k") | (dat$CROPDMGEXP == "K")] <- 3
+dat$CROPDMGEXP[(dat$CROPDMGEXP == "m") | (dat$CROPDMGEXP == "M")] <- 6
+dat$CROPDMGEXP[(dat$CROPDMGEXP == "B")] <- 9
+
+dat$PROPDMGEXP <- as.integer(dat$PROPDMGEXP)
+dat$CROPDMGEXP <- as.integer(dat$CROPDMGEXP)
+
+dat$PROPDMG[(dat$PROPDMG == "")] <- 0
+dat$CROPDMG[(dat$CROPDMG == "")] <- 0
+```
+
+```{r trans_damage}
+trans_damage <- dat %>%
+    mutate(TOTAL_DMG=(PROPDMG * 10^PROPDMGEXP + CROPDMG * 10^CROPDMGEXP)) %>%
+    group_by(EVTYPE) %>%
+    summarize(EVT_TOTAL_DMG=sum(TOTAL_DMG)) %>%
+    arrange(desc(EVT_TOTAL_DMG))
+
+head(trans_damage)
 ```
 
 ## Results
 
-- Must contain at least 1 figure
-- Document can have no more than 3 figures
-- Figures must have descriptive captions
+```{r graph_depend, results="hide", warning=FALSE, message=FALSE}
+depend('ggplot2')
+depend('ggthemes')
+depend('scales')
+```
 
 ### Events most harmful to population health
 
 _Across the United States, which types of events (as indicated in the EVTYPE
 variable) are most harmful with respect to population health?_
 
+Plotting the top 10 event types by total fatalities and total injuries
+clearly shows tornados as the leading impact to population health.
+
+```{r pop_health_graph}
+fatal_pop_health = head(pop_health %>% arrange(desc(TOTAL_FATALITIES)), 10)
+ggplot(fatal_pop_health, aes(EVTYPE, TOTAL_FATALITIES) ) +
+    geom_bar(stat = "identity") +
+    theme_solarized() +
+    scale_colour_solarized("red") +
+    labs(x="Event Type", y="Total Fatalities", title="Total Fatalities by Storm Event Type") +
+    theme(plot.title=element_text(size=15, face="bold", vjust=2)) +
+    theme(legend.title=element_blank()) +
+    theme(axis.text.x=element_text(angle=50, size=5, vjust=0.5))
+
+inj_pop_health = head(pop_health %>% arrange(desc(TOTAL_INJURIES)), 10)
+ggplot(inj_pop_health, aes(EVTYPE, TOTAL_INJURIES) ) +
+    geom_bar(stat = "identity") +
+    theme_solarized() +
+    scale_colour_solarized("red") +
+    labs(x="Event Type", y="Total Injuries", title="Total Injuries by Storm Event Type") +
+    theme(plot.title=element_text(size=15, face="bold", vjust=2)) +
+    theme(legend.title=element_blank()) +
+    theme(axis.text.x=element_text(angle=50, size=5, vjust=0.5))
+
+pop_health[pop_health$EVTYPE=="TORNADO",]
+```
 
 ### Events with greatest economic consequences
 
 _Across the United States, which types of events have the greatest economic consequences?_
 
-Alphabetical characters used to signify magnitude include “K” for thousands,
-“M” for millions, and “B” for billions.
+When the damage numbers have been properly adjusted and combined, the top ten
+most damaging event types
+
+```{r trans_damage_graph}
+trans_damage = head(trans_damage %>% arrange(desc(EVT_TOTAL_DMG)), 10)
+ggplot(trans_damage, aes(EVTYPE, EVT_TOTAL_DMG) ) +
+    geom_bar(stat = "identity") +
+    theme_solarized() +
+    scale_colour_solarized("red") +
+    labs(x="Event Type", y="Total Damage in $", title="Total Economic Impact by Storm Event Type") +
+    theme(plot.title=element_text(size=15, face="bold", vjust=2)) +
+    theme(legend.title=element_blank()) +
+    theme(axis.text.x=element_text(angle=50, size=5, vjust=0.5))
+
+trans_damage[trans_damage$EVTYPE=="FLOOD",]
+```
 
 - - - - -
 
-[data]: https://d396qusza40orc.cloudfront.net/repdata%2Fdata%2FStormData.csv.bz2 "Source Data"
+[data]: https://d396qusza40orc.cloudfront.net/repdata%2Fdata%2FStormcsv.bz2 "Source Data"
 [docs]: https://d396qusza40orc.cloudfront.net/repdata%2Fpeer2_doc%2Fpd01016005curr.pdf "Documentation"
 [faq]: https://d396qusza40orc.cloudfront.net/repdata%2Fpeer2_doc%2FNCDC%20Storm%20Events-FAQ%20Page.pdf "FAQ"
+[dplyr]: https://cran.r-project.org/web/packages/dplyr/index.html "dplyr package"
+[lubridate]: https://cran.r-project.org/web/packages/lubridate/index.html "lubridate package"
